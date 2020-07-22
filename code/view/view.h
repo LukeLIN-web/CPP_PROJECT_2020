@@ -25,7 +25,7 @@
 #include <QStatusBar>
 #include <QRadioButton>
 #include <QFileDialog>
-
+#include "viewCalculate.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class View; }
 QT_END_NAMESPACE
@@ -44,6 +44,7 @@ public:
 	void initMenu();
 	void initBody();
 	void initCmdInterface();
+	viewCalculate *new_mainw;
 
 	// 命令
 	void setLoadImg4Dir(const WorkFunction& command)
@@ -54,10 +55,10 @@ public:
 	{
 		renderLatexString = command;
 	}
-	void setDisplayLatexFormula(const WorkFunctionNoArg& command)
-	{
-		displayLatexFormula = command;
-	}
+	//void setDisplayLatexFormula(const WorkFunctionNoArg& command)
+	//{
+		//displayLatexFormula = command;
+	//}
 	void setDisplayHelpDocument(const WorkFunctionNoArg& command)
 	{
 		displayHelpDocument = command;
@@ -160,6 +161,7 @@ private slots:
 	void onChangeLatexFormula();
 	void onChangeLatexDisplay();
 	void onClickLoadButton();
+	void onClickCalculateButton();
 
 private:
 	Ui::View* ui;
@@ -197,8 +199,8 @@ private:
 	Getter<ptr<const QString>> resultGetter;
 
 	// 用于动态绑定view model
-
-	WorkFunctionNoArg displayLatexFormula;
+	//有参数的函数定义为WorkFunction，无参数的函数定义为WorkFunctionNoArg
+	//WorkFunctionNoArg displayLatexFormula;
 	WorkFunction renderLatexString;
 	WorkFunction loadImg4Dir;
 	WorkFunctionNoArg displayHelpDocument;
