@@ -5,12 +5,56 @@
 #include "../module/HelpManual.h"
 #include <iostream>
 
-void Model::getLatexStringFromImage(const std::string& file_path)
+bool isOperator(char ch)
+{
+	return !isalnum(ch);
+}
+
+std::string Model::applyVarValPairs()
+{
+	if (varValPairs->empty())
+		return *latexString;
+	auto str = *latexString;
+	for (auto& i : *varValPairs)
+	{
+		auto it = str.find_first_of(i.first);
+
+		while (it != str.npos) {
+			int prev = it - 1;
+			bool isSubStr = false;
+			if (prev >= 0 && !isOperator(str[prev]))
+				isSubStr = true;
+			else {
+				int aft = it + i.first.size();
+				if (aft < str.size() && !isOperator(str[aft]))
+					isSubStr = true;
+			}
+			if (!isSubStr) {
+				str.erase(it, i.first.length());
+				str.insert(it, i.second);
+			}
+			it = str.find_first_of(i.first, it + 1);
+		}
+	}
+	return str;
+}
+
+
+void Model::getLatexStringFromImage(const std::string& file_path, bool isMathpixAPI)
 {
 	RequestManager manager;
 	try {
-		auto json = manager->formulaRecognitionMathpix(file_path);
-		setLatexString(JsonParser::parseCurlReturnValMathpix(json));
+
+		if (isMathpixAPI) {
+			auto json = manager->formulaRecognitionMathpix(file_path);
+			setLatexString(JsonParser::parseCurlReturnValMathpix(json));
+		}
+		else
+		{
+
+			auto json = manager->formulaRecognitionBaidu(file_path);
+			setLatexString(JsonParser::parseCurlReturnValBaidu(json));
+		}
 	}
 	catch (std::runtime_error& e)
 	{
@@ -35,7 +79,7 @@ void Model::calculateLatexString()
 	RequestManager manager;
 	try
 	{
-		setResult(XMLParser::parseCurlResult(manager->getFormulaResult(*latexString)));
+		setResult(XMLParser::parseCurlResult(manager->getFormulaResult("0+" + applyVarValPairs())));
 	}
 	catch (std::runtime_error& e)
 	{
@@ -50,14 +94,17 @@ std::string Model::getHelpManual()
 
 void Model::prettifyLatexString()
 {
-	std::string str(100,' ');
+	std::string str(100, ' ');
 	int count = 0;
+	bool isStr = false;
 	for (auto& i : *latexString)
 	{
-		if (i != ' ' && i != '\n' && i != '\r')
+		if (i == '\'' || i == '\"')
+			isStr = !isStr;
+		if (!isStr && i != ' ' && i != '\n' && i != '\r')
 			str[count++] = i;
-		if(count==str.size())
-			str.resize(count*2);
+		if (count == str.size())
+			str.resize(count * 2);
 	}
 	str.resize(count);
 	setLatexString(str);

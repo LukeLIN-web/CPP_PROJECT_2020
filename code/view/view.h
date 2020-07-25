@@ -25,7 +25,11 @@
 #include <QStatusBar>
 #include <QRadioButton>
 #include <QFileDialog>
-#include "viewCalculate.h"
+#include <QDesktopServices>
+#include <QFontDatabase>
+#include <QBitmap>
+#include "calculation.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class View; }
 QT_END_NAMESPACE
@@ -44,22 +48,27 @@ public:
 	void initMenu();
 	void initBody();
 	void initCmdInterface();
-	viewCalculate *new_mainw;
+	void installFont();
 
 	// 命令
 	void setLoadImg4Dir(const WorkFunction& command)
 	{
 		loadImg4Dir = command;
 	}
+	void setLoadImg4DirB(const WorkFunction& command)
+	{
+		loadImg4DirB = command;
+	}
 	void setRenderLatexString(const WorkFunction& command)
 	{
 		renderLatexString = command;
 	}
-	//void setDisplayLatexFormula(const WorkFunctionNoArg& command)
-	//{
-		//displayLatexFormula = command;
-	//}
-	void setDisplayHelpDocument(const WorkFunctionNoArg& command)
+
+	// void setDisplayLatexFormula(const WorkFunctionNoArg& command)
+	// {
+	//	displayLatexFormula = command;
+  	//}
+	void setDisplayHelpDocument(const WorkFunctionWithRetVal& command)
 	{
 		displayHelpDocument = command;
 	}
@@ -67,10 +76,12 @@ public:
 	{
 		prettifyLatexFormula = command;
 	}
+	
 	void setCalculateLatexFormula(WorkFunctionNoArg command)
 	{
-		calculateLatexFormula = command;
+		calculateInterface->setCalculateLatexFormula(command);
 	}
+	
 	/******************** function entry ********************/
 
 	void loadImageFromDir(const std::string& file_path)
@@ -92,21 +103,24 @@ public:
 	{
 		imageDataGetter = getter;
 	}
+	
 	void setVarValPairsGetter(const Getter<ptr<const QVector<VarValPair>>>& getter)
 	{
-		varValPairsGetter = getter;
+		calculateInterface->setVarValPairsGetter(getter);
+		// varValPairsGetter = getter;
 	}
 	void setVarValPairsSetter(const Setter<const QVector<VarValPair>>& setter)
 	{
-		varValPairsSetter = setter;
+		calculateInterface->setVarValPairsSetter(setter);
+		// varValPairsSetter = setter;
 	}
 	void setResultGetter(const Getter<ptr<const QString>>& getter)
 	{
-		resultGetter = getter;
+		calculateInterface->setResultGetter(getter);
+		// resultGetter = getter;
 	}
-
+	
 	/******************** data getter and setter ********************/
-	// 有用吗, 没用就删了
 
 	auto getLatexString() const
 	{
@@ -124,6 +138,8 @@ public:
 	void setStatusBar(ptr<QStatusBar> iStatusBar);
 	void setTimer(ptr<QTimer> iTimer);
 	void setEngineSelectionInterface(ptr<EngineSelection> iEngineSelection);
+	void setCalculateInterface(ptr<Calculation> iViewCalculate);
+	void setHelpMsgBox(ptr<QMessageBox> iMessageBox);
 
 	auto getImgLabel();
 	auto getLatexLabel();
@@ -134,6 +150,8 @@ public:
 	auto getTimer();
 	auto getStatusBar();
 	auto getEngineSelectionInterface();
+	auto getCalculateInterface();
+	auto getHelpMsgBox();
 	
 	/******************** callback function ********************/
 
@@ -146,22 +164,25 @@ public:
 	{
 		imageData = imageDataGetter();
 	}
-
+	
 	void varValPairsUpdateNotified()
 	{
-		varValPairs = varValPairsGetter();
+		calculateInterface->varValPairsUpdateNotified();
+		// varValPairs = varValPairsGetter();
 	}
 
 	void resultViewUpdateNotified()
 	{
-		result = resultGetter();
+		calculateInterface->resultViewUpdateNotified();
+		// result = resultGetter();
 	}
-
+	
 private slots:
 	void onChangeLatexFormula();
 	void onChangeLatexDisplay();
 	void onClickLoadButton();
 	void onClickCalculateButton();
+	void onClickDownloadButton();
 
 private:
 	Ui::View* ui;
@@ -171,6 +192,8 @@ private:
 	ptr<QMenuBar> titleMenuBar;
 	ptr<QLabel> imgLabel;
 	ptr<QLabel> latexLabel;
+	ptr<QLabel> globalFunctionalZoneLabel;
+	ptr<QLabel> formulaDealerZoneLabel;
 	ptr<QPlainTextEdit> latexEditor;
 	ptr<QTimer> timer;
 	ptr<QStatusBar> statusBar;
@@ -183,30 +206,42 @@ private:
 	ptr<QPushButton> applyButton;
 	ptr<QPushButton> prettifyButton;
 	ptr<EngineSelection> engineSelectionInterface;
+	ptr<Calculation> calculateInterface;
+	ptr<QMessageBox> helpMsgBox;
+
+	// View层数据
+	ptr<QPixmap> latexFormulaPixmap;
 
 	// view model数据对象指针
 
 	ptr<const QString> latexString;
 	ptr<const QByteArray> imageData;
+
+	/*
 	ptr<const QVector<VarValPair>> varValPairs;
 	ptr<const QString> result;
+	*/
 
 	Getter<ptr<const QString>> latexStringGetter;
 	Setter<QString> latexStringSetter;
 	Getter<ptr<const QByteArray>> imageDataGetter;
+
+	/*
 	Getter<ptr<const QVector<VarValPair>>> varValPairsGetter;
 	Setter<const QVector<VarValPair>> varValPairsSetter;
 	Getter<ptr<const QString>> resultGetter;
+	*/
 
 	// 用于动态绑定view model
-	//有参数的函数定义为WorkFunction，无参数的函数定义为WorkFunctionNoArg
-	//WorkFunctionNoArg displayLatexFormula;
+	// 有参数的函数定义为WorkFunction，无参数的函数定义为WorkFunctionNoArg
+	// WorkFunctionNoArg displayLatexFormula;
 	WorkFunction renderLatexString;
 	WorkFunction loadImg4Dir;
-	WorkFunctionNoArg displayHelpDocument;
+	WorkFunction loadImg4DirB;
+	WorkFunctionWithRetVal displayHelpDocument;
 	// WorkFunctionNoArg applyLatexFormulaChanges;
 	WorkFunctionNoArg prettifyLatexFormula;
-	WorkFunctionNoArg calculateLatexFormula;  
+	// WorkFunctionNoArg calculateLatexFormula;  
 
 	// 选择识别引擎
 	bool isMathPix = true;
@@ -225,48 +260,4 @@ private:
 	// msg: 提示错误消息，消息常驻
 	void displayErrorMsg(std::string errorMsg);
 	
-	// Font
-	QFont textNormal = QFont("Courier New", 14, QFont::Normal, false);
-	QFont textBold = QFont("Courier New", 14, QFont::Bold, false);
-	QFont titleBold = QFont("Courier New", 22, QFont::Bold, false);
-	QFont menuNormal = QFont("微软雅黑", 10, QFont::Normal, false);
-	QFont msgNormal = QFont("Courier New", 10, QFont::Normal, false);
-
-	// StyleSheet
-	const QString whiteBackground = "background: white;";
-	const QString lightBlueBackground = "background: #7BD9D2; ";
-	const QString lightDarkBackground = "background: #2E323A;";
-
-	const QString whiteWords = "color: white;";
-	const QString redWords = "color: #FF5555;";
-	const QString blackWords = "color: black;";
-
-	const QString blackBorder2Px = "border: 2px solid black;";
-	const QString noBottomBorder = "border-bottom: 0px;";
-
-	const QString textFontSize = "font-size: 14px";
-
-	// @param:
-	// width: default下的width
-	// height: default下的height
-	// @return
-	// 调整后的size
-	inline QSize getAdaptedSize(int width, int height)
-	{
-		// sysWidth: resolution_width / expanding rate
-		// sysHeight: resolution_height / expanding rate
-		// The dafault size of screen is 1920*1080 125%
-		// In this case, the size of the software is 960*600.
-		// In case of different solutionn, change the width and height in proportion.
-		// Windows.h MUST be included!!!
-		int sysWidth = ::GetSystemMetrics(SM_CXSCREEN);
-		int sysHeight = ::GetSystemMetrics(SM_CYSCREEN);
-		int adaptedWidth = (width * sysWidth) / 1536;
-		int adaptedHeight = (height * sysHeight) / 864;
-		return QSize(adaptedWidth, adaptedHeight);
-	}
-	inline QSize getAdaptedSize(QSize size)
-	{
-		return getAdaptedSize(size.width(), size.height());
-	}
 };
